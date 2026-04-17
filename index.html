@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KPB SUPPORT SOLUTION</title>
+
+<style>
+#chat-toggle {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  background: #2563eb;
+  color: white;
+  font-size: 22px;
+  padding: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+#chat-container {
+  position: fixed;
+  left: 20px;
+  bottom: 80px;
+  width: 340px;
+  height: 500px;
+  background: white;
+  border-radius: 15px;
+  display: none;
+  flex-direction: column;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  font-family: Arial;
+}
+
+#chat-header {
+  background: #1e3a8a;
+  color: white;
+  padding: 12px;
+  display: flex;
+  justify-content: space-between;
+}
+
+#chat-body {
+  flex: 1;
+  padding: 10px;
+  overflow-y: auto;
+  background: #f3f4f6;
+}
+
+#chat-footer {
+  display: none;
+  padding: 10px;
+  border-top: 1px solid #ddd;
+}
+
+#user-input {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+#send-btn {
+  margin-left: 5px;
+  padding: 8px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 8px;
+}
+
+.message { display: flex; margin: 6px 0; }
+.user { justify-content: flex-end; }
+.bot { justify-content: flex-start; }
+
+.bubble {
+  padding: 8px 10px;
+  border-radius: 10px;
+  max-width: 75%;
+}
+.user .bubble { background: #2563eb; color: white; }
+.bot .bubble { background: #e5e7eb; }
+
+.assistant-btn, .quick-btn {
+  background: white;
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin: 6px 0;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+}
+.assistant-btn:hover, .quick-btn:hover {
+  background: #2563eb;
+  color: white;
+}
+</style>
+</head>
+
+<body>
+
+<div id="chat-toggle">💬</div>
+
+<div id="chat-container">
+  <div id="chat-header">
+    <span id="chat-title">Select Assistant</span>
+    <button onclick="closeChat()">✖</button>
+  </div>
+
+  <div id="chat-body"></div>
+
+  <div id="chat-footer">
+    <input type="text" id="user-input" placeholder="Type message..." />
+    <button id="send-btn">➤</button>
+  </div>
+</div>
+
+<script>
+let currentAssistant = null;
+
+// 🔥 YOUR FINAL DATA (Questions + Answers)
+const data = {
+
+  hr: {
+    questions: [
+      "How can I apply for leave?",
+      "Is work from home allowed?",
+      "When will salary be credited?",
+      "Can you send my payslip?",
+      "How many leaves do I have left?",
+      "Are there any openings in your company?",
+      "What is your notice period?",
+      "Do you provide internship?"
+    ],
+    answers: {
+      "leave": "You can apply for leave through the Employee Attendance section in your dashboard.",
+      "work from home": "Yes, work from home is allowed depending on your role and manager approval.",
+      "salary": "Salary is usually credited at the end of each month.",
+      "payslip": "You can download your payslip from the payroll section or request HR.",
+      "leaves": "You can check your remaining leave balance in your employee dashboard.",
+      "openings": "Yes, please visit our careers page or contact HR for current openings.",
+      "notice period": "Our standard notice period is 30 days.",
+      "internship": "Yes, we offer internships. Please check with HR for availability."
+    }
+  },
+
+  support: {
+    questions: [
+      "Dashboard is not loading",
+      "I can’t login",
+      "Report download not working",
+      "Why is my data missing?",
+      "This is not working properly",
+      "Getting error again and again",
+      "Upload failed, what to do?",
+      "Can you fix this asap?",
+      "Page is blank",
+      "Something is wrong with my account"
+    ],
+    answers: {
+      "dashboard": "Please refresh the page or clear your browser cache.",
+      "login": "Try resetting your password or check your credentials.",
+      "download": "Ensure pop-ups are enabled and try again.",
+      "data missing": "Data may be syncing. Please wait or contact support.",
+      "not working": "Please describe the issue so we can assist better.",
+      "error": "Try again after some time or contact support team.",
+      "upload": "Check file format and size before uploading.",
+      "fix": "Our team is working on it and will resolve it soon.",
+      "blank": "Try reloading the page or using another browser.",
+      "account": "Please contact support to check your account status."
+    }
+  },
+
+  project: {
+    questions: [
+      "What is the status of my project?",
+      "How much work is completed?",
+      "Can you share the latest report?",
+      "When will I get the next update?",
+      "How many leads did we get this month?",
+      "What is the progress so far?",
+      "Any update on my campaign?",
+      "Why are results low this week?",
+      "Can we make some changes?",
+      "Start a new campaign for my business"
+    ],
+    answers: {
+      "status": "Your project is currently in progress.",
+      "completed": "Around 70% of the work has been completed.",
+      "report": "We will share the latest report via email shortly.",
+      "update": "You will receive the next update within 24-48 hours.",
+      "leads": "Leads data is available in your analytics dashboard.",
+      "progress": "The project is progressing as planned.",
+      "campaign": "Your campaign is active and being optimized.",
+      "results low": "Performance fluctuations are normal; we are optimizing it.",
+      "changes": "Yes, we can make changes. Please specify your requirements.",
+      "start": "Sure! Please share your business details to start a campaign."
+    }
+  }
+};
+
+const chatToggle = document.getElementById("chat-toggle");
+const chatContainer = document.getElementById("chat-container");
+const chatBody = document.getElementById("chat-body");
+const chatFooter = document.getElementById("chat-footer");
+const userInput = document.getElementById("user-input");
+
+chatToggle.onclick = () => {
+  chatContainer.style.display = "flex";
+  showAssistants();
+};
+
+function closeChat() {
+  chatContainer.style.display = "none";
+}
+
+function showAssistants() {
+  chatBody.innerHTML = `
+    <div class="assistant-btn" onclick="selectAssistant('hr')">HR Assistant</div>
+    <div class="assistant-btn" onclick="selectAssistant('support')">Support Assistant</div>
+    <div class="assistant-btn" onclick="selectAssistant('project')">Project Assistant</div>
+  `;
+  chatFooter.style.display = "none";
+}
+
+function selectAssistant(type) {
+  currentAssistant = type;
+  chatBody.innerHTML = "";
+  chatFooter.style.display = "flex";
+
+  document.getElementById("chat-title").innerText =
+    type.toUpperCase() + " Assistant";
+
+  addMessage("How can I assist you today?", "bot");
+
+  data[type].questions.forEach(q => {
+    const btn = document.createElement("div");
+    btn.className = "quick-btn";
+    btn.innerText = q;
+    btn.onclick = () => handleMessage(q);
+    chatBody.appendChild(btn);
+  });
+}
+
+document.getElementById("send-btn").onclick = () => {
+  handleMessage(userInput.value);
+  userInput.value = "";
+};
+
+userInput.addEventListener("keypress", e => {
+  if (e.key === "Enter") {
+    handleMessage(userInput.value);
+    userInput.value = "";
+  }
+});
+
+function handleMessage(msg) {
+  if (!msg) return;
+
+  addMessage(msg, "user");
+
+  setTimeout(() => {
+    const reply = getReply(msg.toLowerCase());
+    addMessage(reply, "bot");
+  }, 500);
+}
+
+function addMessage(text, sender) {
+  const div = document.createElement("div");
+  div.classList.add("message", sender);
+
+  const bubble = document.createElement("div");
+  bubble.classList.add("bubble");
+  bubble.innerText = text;
+
+  div.appendChild(bubble);
+  chatBody.appendChild(div);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+function getReply(msg) {
+  const answers = data[currentAssistant].answers;
+
+  for (let key in answers) {
+    if (msg.includes(key)) return answers[key];
+  }
+
+  return "Please contact our team for more details.";
+}
+</script>
+
+</body>
+</html>
